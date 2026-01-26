@@ -2,7 +2,7 @@ name: Call CI Fix Agent
 
 on:
   workflow_run:
-    workflows: ["Project CI"]   # MUST match CI workflow name
+    workflows: ["Project CI"]   # MUST match project.yml name
     types:
       - completed
 
@@ -12,35 +12,40 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Prepare CI logs
+      # 1️⃣ Download CI logs artifact
+      - name: Download CI logs
+        uses: actions/download-artifact@v4
+        with:
+          name: ci-logs
+          path: logs
+
+      # 2️⃣ Prepare CI_LOGS env variable
       - name: Prepare CI logs
         run: |
           echo "CI_LOGS<<EOF" >> $GITHUB_ENV
-          echo "Workflow failed: ${{ github.event.workflow_run.name }}"
-          echo "Run URL: ${{ github.event.workflow_run.html_url }}"
-          echo "Conclusion: failure"
+          cat logs/ci_logs.txt
           echo "EOF" >> $GITHUB_ENV
 
-      # 2️⃣ Checkout AGENT repo
+      # 3️⃣ Checkout AGENT repo
       - name: Checkout agent repo
         uses: actions/checkout@v4
         with:
-          repository: vyaspurva20/ci-bot-agent   # 🔁 CHANGE if name differs
+          repository: vyaspurva20/ci-smart-agent   # 🔁 CHANGE if needed
           token: ${{ secrets.AGENT_GITHUB_TOKEN }}
           path: agent
 
-      # 3️⃣ Setup Python
+      # 4️⃣ Setup Python
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
-      # 4️⃣ Install agent dependencies
+      # 5️⃣ Install agent dependencies
       - name: Install agent dependencies
         run: |
           pip install groq
 
-      # 5️⃣ Run agent
+      # 6️⃣ Run the agent
       - name: Run CI Fix Agent
         env:
           CI_LOGS: ${{ env.CI_LOGS }}
