@@ -24,11 +24,18 @@ jobs:
 
       - name: Django check
         run: |
-          python manage.py check 2>&1 | tee django_check.log
+          python manage.py check 2>&1 | tee django_check.log || true
 
       - name: Django tests
         run: |
-          python manage.py test 2>&1 | tee django_test.log
+          python manage.py test 2>&1 | tee django_test.log || true
+
+      - name: Fail job if Django failed
+        run: |
+          if grep -q "Exception" django_check.log || grep -q "Exception" django_test.log; then
+            echo "Django failed – triggering CI Fix Agent"
+            exit 1
+          fi
 
       - name: Run CI Fix Agent
         if: failure()
