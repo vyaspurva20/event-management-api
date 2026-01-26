@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 """Django's command-line utility for administrative tasks."""
-import wrong_module_name
+
 import os
 import sys
+import wrong_module_name
 
 
 
