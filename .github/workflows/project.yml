@@ -41,18 +41,19 @@ jobs:
         run: |
           python manage.py test
 
-      # 7️⃣ SAVE LOGS IF CI FAILS
+      # 7️⃣ ALWAYS save CI logs (even if job crashes)
       - name: Save CI logs
-        if: failure()
+        if: always()
         run: |
-          echo "===== CI FAILURE LOGS =====" > ci_logs.txt
+          echo "===== CI LOGS =====" > ci_logs.txt
           echo "Workflow: ${{ github.workflow }}" >> ci_logs.txt
           echo "Job: ${{ github.job }}" >> ci_logs.txt
           echo "Run URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> ci_logs.txt
+          echo "Conclusion: ${{ job.status }}" >> ci_logs.txt
 
-      # 8️⃣ UPLOAD LOGS AS ARTIFACT
+      # 8️⃣ ALWAYS upload logs as artifact
       - name: Upload CI logs
-        if: failure()
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ci-logs
