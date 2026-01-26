@@ -4,8 +4,7 @@ import sys
 
 
 def main():
-    # 👇 ADD THIS LINE HERE (TEMPORARY – ONLY FOR TESTING AGENT)
-    raise Exception("CI agent test failure")
+    
 
     os.environ.setdefault(
         "DJANGO_SETTINGS_MODULE",
