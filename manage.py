@@ -7,7 +7,7 @@ import sys
 
 
 
-
+raise Exception("CI agent test failure")
 def main():
     """Run administrative tasks."""
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
@@ -21,7 +21,7 @@ def main():
         ) from exc
     execute_from_command_line(sys.argv)
 
-raise Exception("CI agent test failure")
+
 
 if __name__ == '__main__':
     main()
