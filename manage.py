@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 """Django's command-line utility for administrative tasks."""
+raise Exception("CI agent test failure")
 
 import os
 import sys
-import wrong_module_name
+
 
 
 
