@@ -10,11 +10,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout code
-      - uses: actions/checkout@v4
+      # 1️⃣ Checkout project code
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       # 2️⃣ Setup Python
-      - uses: actions/setup-python@v5
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
@@ -24,52 +26,40 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # 4️⃣ Django check (capture logs safely)
+      # 4️⃣ Django check (DO NOT FAIL YET)
       - name: Django check
         run: |
           set +e
-          python manage.py check 2>&1 | tee django_check.log
+          python manage.py check > django_check.log 2>&1
           echo $? > django_check.status
 
-      # 5️⃣ Django tests (capture logs safely)
+      # 5️⃣ Django tests (DO NOT FAIL YET)
       - name: Django tests
         run: |
           set +e
-          python manage.py test 2>&1 | tee django_test.log
+          python manage.py test > django_test.log 2>&1
           echo $? > django_test.status
 
-      # 6️⃣ Fail job if any step failed
+      # 6️⃣ Combine logs into one CI_LOGS file
+      - name: Prepare CI logs
+        run: |
+          echo "===== DJANGO CHECK OUTPUT =====" > ci_logs.txt
+          cat django_check.log >> ci_logs.txt || true
+          echo "" >> ci_logs.txt
+          echo "===== DJANGO TEST OUTPUT =====" >> ci_logs.txt
+          cat django_test.log >> ci_logs.txt || true
+
+      # 7️⃣ Upload logs for agent workflow
+      - name: Upload CI logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-logs
+          path: ci_logs.txt
+
+      # 8️⃣ FAIL JOB IF CHECK OR TEST FAILED  ✅ (THIS IS THE KEY STEP)
       - name: Fail if checks failed
         run: |
           if [ "$(cat django_check.status)" != "0" ] || [ "$(cat django_test.status)" != "0" ]; then
+            echo "CI failed due to Django errors"
             exit 1
           fi
-
-      # 7️⃣ Prepare CI logs for agent (SAFE)
-      - name: Prepare CI logs
-        if: failure()
-        run: |
-          echo "CI_LOGS<<EOF" >> $GITHUB_ENV
-          echo "Workflow: ${{ github.workflow }}" >> $GITHUB_ENV
-          echo "Repository: ${{ github.repository }}" >> $GITHUB_ENV
-          echo "Run URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_ENV
-          echo "" >> $GITHUB_ENV
-          echo "===== DJANGO CHECK LOG =====" >> $GITHUB_ENV
-          cat django_check.log >> $GITHUB_ENV
-          echo "" >> $GITHUB_ENV
-          echo "===== DJANGO TEST LOG =====" >> $GITHUB_ENV
-          cat django_test.log >> $GITHUB_ENV
-          echo "" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
-
-      # 8️⃣ 🤖 Run CI Bot Agent
-      - name: Run CI Fix Agent
-        if: failure()
-        env:
-          CI_LOGS: ${{ env.CI_LOGS }}
-          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
-          AGENT_GITHUB_TOKEN: ${{ secrets.AGENT_GITHUB_TOKEN }}
-        run: |
-          git clone https://${AGENT_GITHUB_TOKEN}@github.com/vyaspurva20/ci-bot-agent.git
-          pip install groq
-          python ci-bot-agent/agent/agent.py
