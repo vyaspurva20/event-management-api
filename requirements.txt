@@ -1,5 +1,5 @@
 # ==================================================
-# Core Django (LTS – ecosystem compatible)
+# Core Django (LTS)
 # ==================================================
 Django==4.2.16
 asgiref==3.8.1
@@ -7,9 +7,9 @@ sqlparse==0.5.0
 tzdata==2025.2
 
 # ==================================================
-# Django REST & Auth
+# Django REST & Auth (Django 4.2 compatible)
 # ==================================================
-djangorestframework==3.12.4
+djangorestframework==3.15.1
 djangorestframework-simplejwt==5.2.2
 django-allauth==65.9.0
 
@@ -90,7 +90,7 @@ whitenoise==6.7.0
 graphviz==0.20.3
 
 # ==================================================
-# Data / ML (Python 3.10 COMPATIBLE)
+# Data / ML (Python 3.10 SAFE)
 # ==================================================
 numpy==1.26.4
 scipy==1.11.4
@@ -100,7 +100,7 @@ joblib==1.5.1
 threadpoolctl==3.6.0
 
 # ==================================================
-# JSON / Validation / Schemas
+# JSON / Validation
 # ==================================================
 jsonschema==4.24.0
 jsonschema-specifications==2025.4.1
