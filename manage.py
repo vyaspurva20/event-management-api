@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import os
 import sys
+raise Exception("CI agent test")
 
 
 def main():
