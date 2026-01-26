@@ -10,15 +10,20 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
+    env:
+      DJANGO_SETTINGS_MODULE: config.settings
+      LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+      AGENT_GITHUB_TOKEN: ${{ secrets.AGENT_GITHUB_TOKEN }}
+
     steps:
       # ----------------------------
-      # 1. Checkout code
+      # Checkout code
       # ----------------------------
       - name: Checkout repository
         uses: actions/checkout@v4
 
       # ----------------------------
-      # 2. Setup Python
+      # Setup Python
       # ----------------------------
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -26,7 +31,7 @@ jobs:
           python-version: "3.10"
 
       # ----------------------------
-      # 3. Install dependencies
+      # Install dependencies
       # ----------------------------
       - name: Install dependencies
         run: |
@@ -34,29 +39,24 @@ jobs:
           pip install -r requirements.txt
 
       # ----------------------------
-      # 4. Django check (DO NOT FAIL JOB)
+      # Django check (FAILS naturally)
       # ----------------------------
       - name: Django check
         run: |
-          set +e
           python manage.py check 2>&1 | tee django_check.log
-          echo $? > django_check.status
-          exit 0
 
       # ----------------------------
-      # 5. Django tests (DO NOT FAIL JOB)
+      # Django tests (FAILS naturally)
       # ----------------------------
       - name: Django tests
         run: |
-          set +e
           python manage.py test 2>&1 | tee django_test.log
-          echo $? > django_test.status
-          exit 0
 
       # ----------------------------
-      # 6. Upload CI logs
+      # Upload logs ALWAYS
       # ----------------------------
       - name: Upload CI logs
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ci-logs
@@ -65,45 +65,22 @@ jobs:
             django_test.log
 
       # ----------------------------
-      # 7. Mark job as failed (BUT CONTINUE)
-      # 🔴 THIS IS THE CRITICAL FIX
-      # ----------------------------
-      - name: Fail if checks failed
-        continue-on-error: true
-        run: |
-          if [ "$(cat django_check.status)" != "0" ] || [ "$(cat django_test.status)" != "0" ]; then
-            echo "CI failed due to Django errors"
-            exit 1
-          fi
-
-      # ----------------------------
-      # 8. Prepare logs for agent
-      # ----------------------------
-      - name: Prepare CI logs for agent
-        if: failure()
-        run: |
-          echo "CI_LOGS<<EOF" >> $GITHUB_ENV
-          echo "===== DJANGO CHECK LOG =====" >> $GITHUB_ENV
-          cat django_check.log >> $GITHUB_ENV
-          echo "" >> $GITHUB_ENV
-          echo "===== DJANGO TEST LOG =====" >> $GITHUB_ENV
-          cat django_test.log >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
-
-      # ----------------------------
-      # 9. Run CI Fix Agent 🤖
+      # Run CI Fix Agent ONLY ON FAILURE
       # ----------------------------
       - name: Run CI Fix Agent
         if: failure()
-        env:
-          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
-          AGENT_GITHUB_TOKEN: ${{ secrets.AGENT_GITHUB_TOKEN }}
         run: |
-          echo "Cloning CI Bot Agent repo..."
+          echo "Cloning CI Bot Agent..."
           git clone https://${AGENT_GITHUB_TOKEN}@github.com/vyaspurva20/ci-bot-agent.git
 
           echo "Installing agent dependencies..."
           pip install groq
+
+          echo "Preparing CI logs..."
+          export CI_LOGS="$(cat django_check.log || true)
+
+          ===== DJANGO TEST LOG =====
+          $(cat django_test.log || true)"
 
           echo "Running CI Fix Agent..."
           python ci-bot-agent/agent/agent.py
