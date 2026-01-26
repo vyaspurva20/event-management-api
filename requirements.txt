@@ -1,17 +1,21 @@
 # ===============================
-# Core Framework
+# Core Django Framework
 # ===============================
 Django==5.0.6
-djangorestframework==3.12.4
-djangorestframework-simplejwt==5.2.2
 asgiref==3.8.1
 sqlparse==0.5.0
 tzdata==2025.2
 
 # ===============================
+# REST & Auth
+# ===============================
+djangorestframework==3.12.4
+djangorestframework-simplejwt==5.2.2
+django-allauth==65.9.0
+
+# ===============================
 # Django Utilities
 # ===============================
-django-allauth==65.9.0
 django-cors-headers==3.8.0
 django-crum==0.7.9
 django-dbbackup==4.2.1
@@ -30,7 +34,7 @@ drf-rw-serializers==1.0.5
 drf-spectacular==0.28.0
 
 # ===============================
-# Auth / Security
+# Security & Auth
 # ===============================
 bcrypt==4.3.0
 cryptography==45.0.5
@@ -69,7 +73,7 @@ h11==0.16.0
 websockets==15.0.1
 
 # ===============================
-# Utilities
+# Utilities / Files / Media
 # ===============================
 pillow==11.3.0
 pillow_heif==0.21.0
@@ -86,9 +90,9 @@ whitenoise==6.7.0
 graphviz==0.20.3
 
 # ===============================
-# Data / ML (kept minimal)
+# Data / ML (Python 3.10 SAFE)
 # ===============================
-numpy==2.3.0
+numpy==1.26.4
 pandas==2.2.3
 scikit-learn==1.7.1
 scipy==1.16.1
@@ -122,6 +126,6 @@ click-repl==0.3.0
 colorama==0.4.6
 
 # ===============================
-# FIXED: IPython (CI SAFE)
+# Dev Helper (CI SAFE)
 # ===============================
 ipython>=8.0,<9.0
