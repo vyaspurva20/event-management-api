@@ -24,21 +24,28 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # 4️⃣ Run Django check (CAPTURE LOGS HERE)
-      - name: Django check (capture logs)
-        id: django_check
+      # 4️⃣ Django check (capture logs safely)
+      - name: Django check
         run: |
-          set -o pipefail
+          set +e
           python manage.py check 2>&1 | tee django_check.log
+          echo $? > django_check.status
 
-      # 5️⃣ Run tests (CAPTURE LOGS HERE)
-      - name: Run tests (capture logs)
-        id: django_tests
+      # 5️⃣ Django tests (capture logs safely)
+      - name: Django tests
         run: |
-          set -o pipefail
+          set +e
           python manage.py test 2>&1 | tee django_test.log
+          echo $? > django_test.status
 
-      # 6️⃣ Prepare CI logs FOR AGENT
+      # 6️⃣ Fail job if any step failed
+      - name: Fail if checks failed
+        run: |
+          if [ "$(cat django_check.status)" != "0" ] || [ "$(cat django_test.status)" != "0" ]; then
+            exit 1
+          fi
+
+      # 7️⃣ Prepare CI logs for agent (SAFE)
       - name: Prepare CI logs
         if: failure()
         run: |
@@ -52,9 +59,10 @@ jobs:
           echo "" >> $GITHUB_ENV
           echo "===== DJANGO TEST LOG =====" >> $GITHUB_ENV
           cat django_test.log >> $GITHUB_ENV
+          echo "" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
-      # 7️⃣ 🤖 Run CI Bot Agent
+      # 8️⃣ 🤖 Run CI Bot Agent
       - name: Run CI Fix Agent
         if: failure()
         env:
