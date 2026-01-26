@@ -11,11 +11,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
@@ -24,34 +22,26 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # 🔴 DO NOT hide failure
       - name: Django check
         run: |
-          python manage.py check
+          python manage.py check 2>&1 | tee django_check.log
 
-      # 🔴 DO NOT hide failure
       - name: Django tests
         run: |
-          python manage.py test
+          python manage.py test 2>&1 | tee django_test.log
 
-      # 🤖 CI Fix Agent — runs ONLY if above steps fail
       - name: Run CI Fix Agent
         if: failure()
         env:
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
           AGENT_GITHUB_TOKEN: ${{ secrets.AGENT_GITHUB_TOKEN }}
           CI_LOGS: |
-            Workflow: Project CI
-            Repository: ${{ github.repository }}
-            Run ID: ${{ github.run_id }}
-            Run URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            ===== DJANGO CHECK LOG =====
+            $(cat django_check.log)
+
+            ===== DJANGO TEST LOG =====
+            $(cat django_test.log)
         run: |
-          echo "Cloning CI Bot Agent repo..."
           git clone https://${AGENT_GITHUB_TOKEN}@github.com/vyaspurva20/ci-bot-agent.git
-
-          echo "Installing agent dependencies..."
-          python -m pip install --upgrade pip
           pip install groq
-
-          echo "Running CI Fix Agent..."
           python ci-bot-agent/agent/agent.py
