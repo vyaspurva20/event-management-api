@@ -2,44 +2,46 @@ name: Project CI
 
 on:
   push:
-    branches: [main]
+    branches: [ "main" ]
   pull_request:
+    branches: [ "main" ]
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      # 1️⃣ Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
+      # 2️⃣ Setup Python
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
+      # 3️⃣ Install dependencies
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # ---------------- Django Check ----------------
+      # 4️⃣ Django check (capture logs + status)
       - name: Django check
-        id: django_check
-        continue-on-error: true
         run: |
+          set +e
           python manage.py check 2>&1 | tee django_check.log
           echo $? > django_check.status
 
-      # ---------------- Django Tests ----------------
+      # 5️⃣ Django tests (capture logs + status)
       - name: Django tests
-        id: django_test
-        continue-on-error: true
         run: |
+          set +e
           python manage.py test 2>&1 | tee django_test.log
           echo $? > django_test.status
 
-      # ---------------- Upload CI Logs ----------------
+      # 6️⃣ Upload CI logs (ALWAYS runs)
       - name: Upload CI logs
         if: always()
         uses: actions/upload-artifact@v4
@@ -49,7 +51,7 @@ jobs:
             django_check.log
             django_test.log
 
-      # ---------------- Fail job if needed ----------------
+      # 7️⃣ ❗ FAIL the job if Django failed (THIS IS THE KEY FIX)
       - name: Fail if checks failed
         run: |
           if [ "$(cat django_check.status)" != "0" ] || [ "$(cat django_test.status)" != "0" ]; then
@@ -57,23 +59,25 @@ jobs:
             exit 1
           fi
 
-      # ---------------- Run CI Bot Agent ----------------
+      # 8️⃣ 🤖 Run CI Bot Agent (Mode A – runs ONLY on failure)
       - name: Run CI Fix Agent
         if: failure()
         env:
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
           AGENT_GITHUB_TOKEN: ${{ secrets.AGENT_GITHUB_TOKEN }}
           CI_LOGS: |
-            Workflow: Project CI
-            Repository: ${{ github.repository }}
-            Run ID: ${{ github.run_id }}
-            Run URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            ===== DJANGO CHECK OUTPUT =====
+            $(cat django_check.log)
+
+            ===== DJANGO TEST OUTPUT =====
+            $(cat django_test.log)
         run: |
           echo "Cloning CI Bot Agent repo..."
           git clone https://${AGENT_GITHUB_TOKEN}@github.com/vyaspurva20/ci-bot-agent.git
 
           echo "Installing agent dependencies..."
-          python -m pip install groq
+          python -m pip install --upgrade pip
+          pip install groq
 
           echo "Running CI Bot Agent..."
           python ci-bot-agent/agent/agent.py
