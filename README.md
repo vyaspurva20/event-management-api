@@ -18,7 +18,7 @@ It allows users to create events, RSVP to events, and leave reviews. The system 
 - Optional: Unit Tests using Django Test Framework
 
 ---
-
+.
 ## Project Setup Instructions
 
 ### 1. Clone the Repository
