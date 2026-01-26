@@ -3,9 +3,14 @@ import os
 import sys
 
 
-
 def main():
-    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
+    # 👇 ADD THIS LINE HERE (TEMPORARY – ONLY FOR TESTING AGENT)
+    raise Exception("CI agent test failure")
+
+    os.environ.setdefault(
+        "DJANGO_SETTINGS_MODULE",
+        "config.settings"   # this matches your repo structure
+    )
 
     try:
         from django.core.management import execute_from_command_line
@@ -14,7 +19,7 @@ def main():
             "Couldn't import Django. Are you sure it's installed and "
             "available on your PYTHONPATH environment variable?"
         ) from exc
-        raise Exception("CI agent test")
+
     execute_from_command_line(sys.argv)
 
 
