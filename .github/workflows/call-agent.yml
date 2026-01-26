@@ -1,5 +1,6 @@
 name: Call CI Fix Agent
 
+# 🔑 REQUIRED permissions to read artifacts from workflow_run
 permissions:
   actions: read
   contents: read
@@ -16,14 +17,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Download CI logs from Project CI workflow
+      # 1️⃣ Download CI logs artifact from Project CI
       - name: Download CI logs
         uses: actions/download-artifact@v4
         with:
           name: ci-logs
           path: logs
           run-id: ${{ github.event.workflow_run.id }}
-          repository: ${{ github.repository }}
+          repository: ${{ github.event.workflow_run.repository.full_name }}
 
       # 2️⃣ Prepare CI_LOGS env variable
       - name: Prepare CI logs
@@ -52,7 +53,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install groq
 
-      # 6️⃣ Run the agent
+      # 6️⃣ Run the CI Fix Agent
       - name: Run CI Fix Agent
         env:
           CI_LOGS: ${{ env.CI_LOGS }}
