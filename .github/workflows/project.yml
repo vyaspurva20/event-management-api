@@ -11,41 +11,49 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout code
+      # -------------------------
+      # Checkout code
+      # -------------------------
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2️⃣ Setup Python
+      # -------------------------
+      # Setup Python
+      # -------------------------
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
-      # 3️⃣ Install dependencies
+      # -------------------------
+      # Install dependencies
+      # -------------------------
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install -r requirements.txt
 
-      # 4️⃣ Django check (capture logs)
+      # -------------------------
+      # Django check (capture status)
+      # -------------------------
       - name: Django check
-        id: django_check
         run: |
           set +e
           python manage.py check 2>&1 | tee django_check.log
           echo $? > django_check.status
-          exit 0
 
-      # 5️⃣ Django tests (capture logs)
+      # -------------------------
+      # Django tests (capture status)
+      # -------------------------
       - name: Django tests
-        id: django_tests
         run: |
           set +e
           python manage.py test 2>&1 | tee django_test.log
           echo $? > django_test.status
-          exit 0
 
-      # 6️⃣ Upload CI logs (always)
+      # -------------------------
+      # Upload logs always
+      # -------------------------
       - name: Upload CI logs
         if: always()
         uses: actions/upload-artifact@v4
@@ -55,30 +63,31 @@ jobs:
             django_check.log
             django_test.log
 
-      # 7️⃣ Fail job if checks failed
+      # -------------------------
+      # Fail job if Django failed (IMPORTANT FIX)
+      # -------------------------
       - name: Fail if checks failed
-        id: fail_step
         run: |
           if [ "$(cat django_check.status)" != "0" ] || [ "$(cat django_test.status)" != "0" ]; then
             echo "CI failed due to Django errors"
             exit 1
           fi
 
-      # 8️⃣ Prepare CI_LOGS for agent (🔥 CRITICAL FIX 🔥)
+      # -------------------------
+      # Prepare logs for agent
+      # -------------------------
       - name: Prepare CI logs for agent
         if: failure()
         run: |
-          {
-            echo "CI_LOGS<<EOF"
-            echo "===== DJANGO CHECK LOG ====="
-            cat django_check.log || echo "No django_check.log"
-            echo
-            echo "===== DJANGO TEST LOG ====="
-            cat django_test.log || echo "No django_test.log"
-            echo "EOF"
-          } >> $GITHUB_ENV
+          echo "===== DJANGO CHECK LOG =====" > ci_logs.txt
+          cat django_check.log >> ci_logs.txt
+          echo "" >> ci_logs.txt
+          echo "===== DJANGO TEST LOG =====" >> ci_logs.txt
+          cat django_test.log >> ci_logs.txt
 
-      # 9️⃣ Run CI Fix Agent (ONLY on failure)
+      # -------------------------
+      # Run CI Fix Agent (ONLY ON FAILURE)
+      # -------------------------
       - name: Run CI Fix Agent
         if: failure()
         env:
@@ -90,8 +99,8 @@ jobs:
           git clone https://${AGENT_GITHUB_TOKEN}@github.com/vyaspurva20/ci-bot-agent.git
 
           echo "Installing agent dependencies..."
-          python -m pip install --upgrade pip
           pip install groq
 
           echo "Running CI Fix Agent..."
+          export CI_LOGS="$(cat ci_logs.txt)"
           python ci-bot-agent/agent/agent.py
