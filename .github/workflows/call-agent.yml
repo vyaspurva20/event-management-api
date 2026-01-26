@@ -1,0 +1,35 @@
+name: Call CI Fix Agent
+
+on:
+  workflow_run:
+    workflows: ["Project CI"]
+    types:
+      - completed
+
+jobs:
+  run-agent:
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download CI logs
+        uses: actions/download-artifact@v4
+        with:
+          name: ci-logs
+          path: .
+
+      - name: Run CI Fix Agent
+        env:
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          AGENT_GITHUB_TOKEN: ${{ secrets.AGENT_GITHUB_TOKEN }}
+          CI_LOGS: ${{ github.event.workflow_run.html_url }}
+        run: |
+          echo "Cloning CI Bot Agent repo..."
+          git clone https://${AGENT_GITHUB_TOKEN}@github.com/vyaspurva20/ci-bot-agent.git
+
+          echo "Installing agent dependencies..."
+          python -m pip install --upgrade pip
+          pip install groq
+
+          echo "Running CI Bot Agent..."
+          python ci-bot-agent/agent/agent.py
