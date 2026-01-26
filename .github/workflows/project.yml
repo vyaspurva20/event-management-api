@@ -11,66 +11,40 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout code
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2️⃣ Setup Python
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
-      # 3️⃣ Install dependencies
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # 4️⃣ Django check (capture logs + status)
+      # 🔴 DO NOT hide failure
       - name: Django check
         run: |
-          set +e
-          python manage.py check 2>&1 | tee django_check.log
-          echo $? > django_check.status
+          python manage.py check
 
-      # 5️⃣ Django tests (capture logs + status)
+      # 🔴 DO NOT hide failure
       - name: Django tests
         run: |
-          set +e
-          python manage.py test 2>&1 | tee django_test.log
-          echo $? > django_test.status
+          python manage.py test
 
-      # 6️⃣ Upload CI logs (ALWAYS runs)
-      - name: Upload CI logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ci-logs
-          path: |
-            django_check.log
-            django_test.log
-
-      # 7️⃣ ❗ FAIL the job if Django failed (THIS IS THE KEY FIX)
-      - name: Fail if checks failed
-        run: |
-          if [ "$(cat django_check.status)" != "0" ] || [ "$(cat django_test.status)" != "0" ]; then
-            echo "CI failed due to Django errors"
-            exit 1
-          fi
-
-      # 8️⃣ 🤖 Run CI Bot Agent (Mode A – runs ONLY on failure)
+      # 🤖 CI Fix Agent — runs ONLY if above steps fail
       - name: Run CI Fix Agent
         if: failure()
         env:
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
           AGENT_GITHUB_TOKEN: ${{ secrets.AGENT_GITHUB_TOKEN }}
           CI_LOGS: |
-            ===== DJANGO CHECK OUTPUT =====
-            $(cat django_check.log)
-
-            ===== DJANGO TEST OUTPUT =====
-            $(cat django_test.log)
+            Workflow: Project CI
+            Repository: ${{ github.repository }}
+            Run ID: ${{ github.run_id }}
+            Run URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           echo "Cloning CI Bot Agent repo..."
           git clone https://${AGENT_GITHUB_TOKEN}@github.com/vyaspurva20/ci-bot-agent.git
@@ -79,5 +53,5 @@ jobs:
           python -m pip install --upgrade pip
           pip install groq
 
-          echo "Running CI Bot Agent..."
+          echo "Running CI Fix Agent..."
           python ci-bot-agent/agent/agent.py
