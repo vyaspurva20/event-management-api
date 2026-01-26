@@ -69,6 +69,10 @@ jobs:
             echo "Django failed — triggering CI Fix Agent"
             exit 1
           fi
+      - name: Force failure (TEST AGENT)
+        run: |
+            echo "Forcing CI failure to test agent"
+            exit 1
 
       # ----------------------------
       # Run CI Fix Agent (ONLY ON FAILURE)
