@@ -3,44 +3,65 @@ name: Project CI
 on:
   push:
     branches: [ main ]
+  pull_request:
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      # 1️⃣ Checkout project code
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      # 2️⃣ Setup Python
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
+      # 3️⃣ Install project dependencies
       - name: Install dependencies
         run: |
+          python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      # 4️⃣ Django system check (INTENTIONAL FAILURE FOR TESTING)
       - name: Run Django check
-        run: python manage.py check
+        run: |
+          python manage.py check
 
+      # 5️⃣ Run tests
       - name: Run tests
-        run: python manage.py test
+        run: |
+          python manage.py test
 
-      # ✅ ALWAYS collect logs
+      # 6️⃣ Prepare CI logs ONLY if failure happens
       - name: Prepare CI logs
         if: failure()
         run: |
           echo "CI_LOGS<<EOF" >> $GITHUB_ENV
-          echo "Intentional CI failure detected" >> $GITHUB_ENV
+          echo "Workflow: ${{ github.workflow }}" >> $GITHUB_ENV
+          echo "Repository: ${{ github.repository }}" >> $GITHUB_ENV
+          echo "Run ID: ${{ github.run_id }}" >> $GITHUB_ENV
           echo "Run URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_ENV
+          echo "Failure reason: Django check or tests failed" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
-      # 🤖 CALL YOUR AGENT REPO
+      # 7️⃣ 🤖 Run CI Fix Agent (USING ci-bot-agent repo)
       - name: Run CI Fix Agent
         if: failure()
         env:
           CI_LOGS: ${{ env.CI_LOGS }}
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          AGENT_GITHUB_TOKEN: ${{ secrets.AGENT_GITHUB_TOKEN }}
         run: |
-          git clone https://github.com/vyaspurva20/ci-smart-agent.git
+          echo "Cloning CI Bot Agent repo..."
+          git clone https://${AGENT_GITHUB_TOKEN}@github.com/vyaspurva20/ci-bot-agent.git
+
+          echo "Installing agent dependencies..."
+          python -m pip install --upgrade pip
           pip install groq
-          python ci-smart-agent/agent/agent.py
+
+          echo "Running CI Bot Agent..."
+          python ci-bot-agent/agent/agent.py
