@@ -26,7 +26,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # 4️⃣ Run Django check (this will fail intentionally for testing)
+      # 4️⃣ Run Django check (this fails intentionally for testing)
       - name: Run Django check
         run: |
           python manage.py check
@@ -36,7 +36,7 @@ jobs:
         run: |
           python manage.py test
 
-      # 6️⃣ Prepare REAL CI logs for the agent (VERY IMPORTANT)
+      # 6️⃣ Prepare REAL CI logs (stdout + stderr) for the agent
       - name: Prepare CI logs
         if: failure()
         run: |
@@ -46,11 +46,15 @@ jobs:
           echo "Run ID: ${{ github.run_id }}" >> $GITHUB_ENV
           echo "Run URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_ENV
           echo "" >> $GITHUB_ENV
+
           echo "===== DJANGO CHECK OUTPUT =====" >> $GITHUB_ENV
-          python manage.py check || true
+          python manage.py check 2>&1 || true
           echo "" >> $GITHUB_ENV
+
           echo "===== TEST OUTPUT =====" >> $GITHUB_ENV
-          python manage.py test || true
+          python manage.py test 2>&1 || true
+          echo "" >> $GITHUB_ENV
+
           echo "EOF" >> $GITHUB_ENV
 
       # 7️⃣ 🤖 Run CI Bot Agent (ci-bot-agent repo)
