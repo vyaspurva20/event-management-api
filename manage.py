@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-import oas
-import sys
+import os
+import sysaa
 
 
 def main():
