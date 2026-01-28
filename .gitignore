@@ -4,5 +4,7 @@
 ci-logs/
 # CI agent is runtime-only
 ci-bot-agent/
+# Runtime CI agent clone
+ci-bot-agent/
 
 
