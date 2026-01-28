@@ -2,50 +2,51 @@ name: Project CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, develop ]
   pull_request:
-    branches: [ main ]
-  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
 
 jobs:
-  build-and-test:
+  ci:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout code
-      - name: Checkout repository
+      # ---------------- CHECKOUT ----------------
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2️⃣ Setup Python
+      # ---------------- PYTHON ----------------
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
-      # 3️⃣ Install dependencies
+      # ---------------- DEPS ----------------
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # 4️⃣ Django system check
+      # ---------------- DJANGO CHECK ----------------
       - name: Django check
+        continue-on-error: true
         run: |
-          set +e
           python manage.py check 2>&1 | tee django_check.log
           echo $? > django_check.status
-          exit 0
 
-      # 5️⃣ Django tests
+      # ---------------- DJANGO TEST ----------------
       - name: Django tests
+        continue-on-error: true
         run: |
-          set +e
           python manage.py test 2>&1 | tee django_test.log
           echo $? > django_test.status
-          exit 0
 
-      # 6️⃣ Upload CI logs
+      # ---------------- UPLOAD LOGS ----------------
       - name: Upload CI logs
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ci-logs
@@ -53,28 +54,38 @@ jobs:
             django_check.log
             django_test.log
 
-      # 7️⃣ Fail job if checks/tests failed
-      - name: Fail if checks failed
-        run: |
-          if [ "$(cat django_check.status)" != "0" ] || [ "$(cat django_test.status)" != "0" ]; then
-            echo "CI checks failed"
-            exit 1
-          fi
-
-      # 8️⃣ Run CI Fix Agent (ONLY on failure)
+      # ---------------- RUN AGENT ----------------
       - name: Run CI Fix Agent
-        if: failure()
+        if: always()
         env:
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
           AGENT_GITHUB_TOKEN: ${{ secrets.AGENT_GITHUB_TOKEN }}
-          CI_LOGS: |
-            ===== DJANGO CHECK LOG =====
-            $(cat django_check.log)
+        run: |
+          CHECK_STATUS=$(cat django_check.status)
+          TEST_STATUS=$(cat django_test.status)
+
+          if [ "$CHECK_STATUS" != "0" ] || [ "$TEST_STATUS" != "0" ]; then
+            echo "❌ CI failed — running agent"
+
+            export CI_LOGS="$(cat django_check.log)
 
             ===== DJANGO TEST LOG =====
-            $(cat django_test.log)
+            $(cat django_test.log)"
+
+            git clone https://${AGENT_GITHUB_TOKEN}@github.com/vyaspurva20/ci-bot-agent.git
+            pip install groq requests PyGithub
+            python ci-bot-agent/agent/agent.py
+          else
+            echo "✅ CI passed — skipping agent"
+          fi
+
+      # ---------------- FINAL FAIL ----------------
+      - name: Fail CI if errors remain
+        if: always()
         run: |
-          echo "Running CI Fix Agent..."
-          git clone https://${AGENT_GITHUB_TOKEN}@github.com/vyaspurva20/ci-bot-agent.git
-          pip install groq
-          python ci-bot-agent/agent/agent.py
+          if [ "$(cat django_check.status)" != "0" ] || [ "$(cat django_test.status)" != "0" ]; then
+            echo "❌ CI still failing after agent"
+            exit 1
+          fi
+
+          echo "✅ CI successful"
