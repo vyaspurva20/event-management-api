@@ -22,35 +22,30 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: '3.10'
 
-      # ---------------- DEPS ----------------
+      # ---------------- DEPENDENCIES ----------------
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # ---------------- DJANGO CHECK ----------------
+      # ================= STEP 1 =================
+      # Capture Django check output + exit code
       - name: Django check
         continue-on-error: true
         run: |
           set +e
-          set -o pipefail
           python manage.py check 2>&1 | tee django_check.log
-          CHECK_STATUS=${PIPESTATUS[0]}
-          echo $CHECK_STATUS > django_check.status
+          echo $? > django_check.status
 
+      # Capture Django test output + exit code
       - name: Django tests
         continue-on-error: true
         run: |
           set +e
-          set -o pipefail
           python manage.py test 2>&1 | tee django_test.log
-          TEST_STATUS=${PIPESTATUS[0]}
-          echo $TEST_STATUS > django_test.status
-
-
-
+          echo $? > django_test.status
 
       # ---------------- UPLOAD LOGS ----------------
       - name: Upload CI logs
@@ -61,40 +56,38 @@ jobs:
           path: |
             django_check.log
             django_test.log
+            django_check.status
+            django_test.status
 
-      # ---------------- RUN AGENT ----------------
+      # ================= STEP 2 =================
+      # Always run agent and pass logs
       - name: Run CI Fix Agent
         if: always()
         env:
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
           AGENT_GITHUB_TOKEN: ${{ secrets.AGENT_GITHUB_TOKEN }}
-        run: |
-          CHECK_STATUS=$(cat django_check.status 2>/dev/null || echo 0)
-          TEST_STATUS=$(cat django_test.status 2>/dev/null || echo 0)
-
-          if [ "$CHECK_STATUS" != "0" ] || [ "$TEST_STATUS" != "0" ]; then
-            echo "❌ CI failed — running agent"
-
-            export CI_LOGS="$(cat django_check.log)
+          CI_LOGS: |
+            ===== DJANGO CHECK LOG =====
+            $(cat django_check.log)
 
             ===== DJANGO TEST LOG =====
-            $(cat django_test.log)"
-
-            git clone https://${AGENT_GITHUB_TOKEN}@github.com/vyaspurva20/ci-bot-agent.git
-            pip install groq requests PyGithub
-            python ci-bot-agent/agent/agent.py
-          else
-            echo "✅ CI passed — skipping agent"
-          fi
-
+            $(cat django_test.log)
+        run: |
+          echo "Running CI Fix Agent..."
+          git clone https://${AGENT_GITHUB_TOKEN}@github.com/vyaspurva20/ci-bot-agent.git
+          pip install groq requests PyGithub
+          python ci-bot-agent/agent/agent.py
 
       # ---------------- FINAL FAIL ----------------
-      - name: Fail CI if errors remain
+      - name: Fail CI if still broken
         if: always()
         run: |
-          if [ "$(cat django_check.status)" != "0" ] || [ "$(cat django_test.status)" != "0" ]; then
+          CHECK_STATUS=$(cat django_check.status)
+          TEST_STATUS=$(cat django_test.status)
+
+          if [ "$CHECK_STATUS" != "0" ] || [ "$TEST_STATUS" != "0" ]; then
             echo "❌ CI still failing after agent"
             exit 1
+          else
+            echo "✅ CI successful"
           fi
-
-          echo "✅ CI successful"
