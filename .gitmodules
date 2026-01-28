@@ -1,3 +1,0 @@
-[submodule "ci-bot-agent"]
-  path = ci-bot-agent
-  url = https://github.com/vyaspurva20/ci-bot-agent.git
