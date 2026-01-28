@@ -2,6 +2,7 @@
 *.log
 *.status
 ci-logs/
-# CI agent (must never be committed)
+# CI agent is runtime-only
 ci-bot-agent/
+
 
