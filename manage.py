@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import os
-import sysaa
+import sys
+import abcxyz
 
 
 def main():
