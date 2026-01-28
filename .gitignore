@@ -2,3 +2,6 @@
 *.log
 *.status
 ci-logs/
+# CI agent (must never be committed)
+ci-bot-agent/
+
