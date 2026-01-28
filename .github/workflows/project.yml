@@ -34,15 +34,17 @@ jobs:
       - name: Django check
         continue-on-error: true
         run: |
+          set -o pipefail
           python manage.py check 2>&1 | tee django_check.log
           echo $? > django_check.status
-
-      # ---------------- DJANGO TEST ----------------
+# ---------------- DJANGO TEST ----------------
       - name: Django tests
         continue-on-error: true
         run: |
+          set -o pipefail
           python manage.py test 2>&1 | tee django_test.log
           echo $? > django_test.status
+
 
       # ---------------- UPLOAD LOGS ----------------
       - name: Upload CI logs
