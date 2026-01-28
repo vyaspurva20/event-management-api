@@ -1,0 +1,4 @@
+# CI logs
+*.log
+*.status
+ci-logs/
