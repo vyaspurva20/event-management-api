@@ -35,15 +35,16 @@ jobs:
         continue-on-error: true
         run: |
           set -o pipefail
-          python manage.py check 2>&1 | tee django_check.log || true
-          echo $? > django_check.status
-# ---------------- DJANGO TEST ----------------
+          python manage.py check 2>&1 | tee django_check.log
+          echo ${PIPESTATUS[0]} > django_check.status
+
       - name: Django tests
         continue-on-error: true
         run: |
           set -o pipefail
-          python manage.py test 2>&1 | tee django_test.log || true
-          echo $? > django_test.status
+          python manage.py test 2>&1 | tee django_test.log
+          echo ${PIPESTATUS[0]} > django_test.status
+
 
 
       # ---------------- UPLOAD LOGS ----------------
