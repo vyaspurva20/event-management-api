@@ -34,16 +34,21 @@ jobs:
       - name: Django check
         continue-on-error: true
         run: |
+          set +e
           set -o pipefail
           python manage.py check 2>&1 | tee django_check.log
-          echo ${PIPESTATUS[0]} > django_check.status
+          CHECK_STATUS=${PIPESTATUS[0]}
+          echo $CHECK_STATUS > django_check.status
 
       - name: Django tests
         continue-on-error: true
         run: |
+          set +e
           set -o pipefail
           python manage.py test 2>&1 | tee django_test.log
-          echo ${PIPESTATUS[0]} > django_test.status
+          TEST_STATUS=${PIPESTATUS[0]}
+          echo $TEST_STATUS > django_test.status
+
 
 
 
